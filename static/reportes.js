@@ -23,14 +23,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnEliminarSeleccion = document.getElementById('btn-eliminar-seleccion');
     const contadorSeleccion = document.getElementById('contador-seleccion');
 
-    // Elementos del Modal Modificar
     const modificarMetodoSelect = document.getElementById('modificar-metodo');
     const modificarCamposMixto = document.getElementById('modificar-campos-mixto');
     const modMontoTotal = document.getElementById('modificar-monto');
     const modMontoEfectivo = document.getElementById('modificar-monto-efectivo');
     const modMontoBanco = document.getElementById('modificar-monto-banco');
     
-    // NUEVO: Selectores para el Tipo y Clasificación en el Modal
     const modificarTipoSelect = document.getElementById('modificar-tipo');
     const modificarClasificacionSelect = document.getElementById('modificar-clasificacion');
 
@@ -47,10 +45,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ===================================================================
-    // == LÓGICA VISUAL Y TABLA ==
-    // ===================================================================
-    
     function obtenerClaseColor(tipo, metodo) {
         const t = (tipo || '').toLowerCase();
         const m = (metodo || '').toLowerCase();
@@ -203,26 +197,25 @@ document.addEventListener('DOMContentLoaded', function() {
         actualizarEstadoSeleccion(); 
     }
 
-    function cargarMovimientos() {
-        fetch('/api/movimientos') 
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) alert("Error al cargar datos.");
-                else {
-                    todosLosMovimientos = data; 
-                    actualizarTabla(); 
-                }
-            })
-            .catch(error => console.error("Error de red:", error));
+    async function cargarMovimientos() {
+        try {
+            const response = await fetchAPI('/api/movimientos');
+            const data = await response.json();
+            
+            if (data.error) {
+                alert("Error al cargar datos.");
+            } else {
+                todosLosMovimientos = data; 
+                actualizarTabla(); 
+            }
+        } catch (error) {
+            console.error("Error de red:", error);
+        }
     }
     
     filtrarBtn.addEventListener('click', actualizarTabla); 
     if (ordenarPorSelect) ordenarPorSelect.addEventListener('change', actualizarTabla);
     cargarMovimientos(); 
-
-    // ===================================================================
-    // == LÓGICA DE SELECCIÓN MÚLTIPLE ==
-    // ===================================================================
     
     function actualizarEstadoSeleccion() {
         const checkboxes = document.querySelectorAll('.mov-checkbox');
@@ -258,13 +251,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const seleccionados = document.querySelectorAll('.mov-checkbox:checked');
         const ids = Array.from(seleccionados).map(cb => cb.value);
         
-        this.disabled = true;
-        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Borrando...';
+        const btn = this;
+        const textoOriginal = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Borrando...';
         
         let borradosExito = 0;
         for(let id of ids) {
             try {
-                const res = await fetch(`/api/movimiento/${id}`, { method: 'DELETE' });
+                const res = await fetchAPI(`/api/movimientos/${id}`, { method: 'DELETE' });
                 const data = await res.json();
                 if(!data.error) borradosExito++;
             } catch (e) {
@@ -272,17 +267,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        this.disabled = false;
-        this.textContent = 'Sí, Eliminar Todo';
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
         eliminarMultipleModal.style.display = 'none';
         
         alert(`Se eliminaron ${borradosExito} movimientos correctamente.`);
         cargarMovimientos();
     });
-
-    // ===================================================================
-    // == LÓGICA DE EVENTOS MENÚ Y DETALLES ==
-    // ===================================================================
 
     tableBody.addEventListener('click', function(event) {
         if(event.target.classList.contains('mov-checkbox') || event.target.tagName.toLowerCase() === 'input') return;
@@ -348,7 +339,6 @@ document.addEventListener('DOMContentLoaded', function() {
         detallesModal.style.display = 'flex';
     }
 
-    // --- NUEVO: Lógica Dinámica de Tipo y Clasificación ---
     function actualizarOpcionesClasificacionMod() {
         const tipo = modificarTipoSelect.value;
         modificarClasificacionSelect.innerHTML = ''; 
@@ -368,7 +358,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Desbloqueamos el selector de tipo y asignamos el evento
     if (modificarTipoSelect) {
         modificarTipoSelect.disabled = false;
         modificarTipoSelect.addEventListener('change', actualizarOpcionesClasificacionMod);
@@ -392,7 +381,6 @@ document.addEventListener('DOMContentLoaded', function() {
             modMontoEfectivo.required = true;
             modMontoBanco.required = true;
             
-            // Bloquear el Monto Total
             modMontoTotal.readOnly = true;
             modMontoTotal.style.backgroundColor = '#e9ecef';
             calcularTotalModMixto();
@@ -401,7 +389,6 @@ document.addEventListener('DOMContentLoaded', function() {
             modMontoEfectivo.required = false;
             modMontoBanco.required = false;
             
-            // Desbloquear el Monto Total
             modMontoTotal.readOnly = false;
             modMontoTotal.style.backgroundColor = '';
         }
@@ -417,23 +404,19 @@ document.addEventListener('DOMContentLoaded', function() {
         modMontoTotal.value = isNaN(montoMod) ? '' : Math.abs(montoMod); 
         document.getElementById('modificar-metodo').value = data.metodo || 'Efectivo'; 
         
-        // Asignamos el tipo y actualizamos las clasificaciones primero
         modificarTipoSelect.value = data.tipo || 'ingreso'; 
         actualizarOpcionesClasificacionMod();
 
         document.getElementById('modificar-comentario').value = data.comentario || '';
         
-        // Asignamos la clasificación si es válida
         if(data.clasificacion && data.clasificacion !== 'N/A') {
             modificarClasificacionSelect.value = data.clasificacion;
         }
         
-        // Si quedó en blanco por un cambio cruzado, le damos un valor por defecto
         if (!modificarClasificacionSelect.value) {
             modificarClasificacionSelect.value = (modificarTipoSelect.value === 'ingreso') ? 'venta' : 'compra';
         }
         
-        // Extraer valores si era Mixto previamente
         if (data.metodo === 'Mixto' && data.comentario) {
             const regexEfectivo = /Efectivo:\s*\$([\d.]+)/;
             const regexBanco = /Banco:\s*\$([\d.]+)/;
@@ -455,11 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
         eliminarModal.style.display = 'flex';
     }
 
-    // ===================================================================
-    // == PROCESAR FORMULARIOS ==
-    // ===================================================================
-
-    modificarForm.addEventListener('submit', function(event) {
+    modificarForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const id = document.getElementById('modificar-id').value;
         const tipoGeneral = modificarTipoSelect.value; 
@@ -467,13 +446,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const montoAbs = Math.abs(parseFloat(modMontoTotal.value));
         
-        // MAGIA AQUÍ: Calculamos el signo dependiendo del tipo seleccionado
-        const montoFinal = isNaN(montoAbs) ? 0 : (esEgreso ? -montoAbs : montoAbs); 
-        
+        if (isNaN(montoAbs) || montoAbs <= 0) {
+            alert("El monto ingresado no es válido. Debe ser mayor a 0.");
+            return;
+        }
+
+        const montoFinal = esEgreso ? -montoAbs : montoAbs; 
         const metodoSeleccionado = document.getElementById('modificar-metodo').value;
         let comentarioFinal = document.getElementById('modificar-comentario').value || '';
 
-        // Limpiar el desglose anterior del comentario para no duplicarlo
         comentarioFinal = comentarioFinal.replace(/\[Mixto -> Efectivo: \$[\d.]+ \| Banco: \$[\d.]+\]/g, '').trim();
 
         if (metodoSeleccionado === 'Mixto') {
@@ -498,36 +479,57 @@ document.addEventListener('DOMContentLoaded', function() {
             tipo: tipoGeneral,
             comentario: comentarioFinal
         };
+
+        const btn = this.querySelector('button[type="submit"]');
+        const btnOriginalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        btn.disabled = true;
         
-        fetch(`/api/movimiento/${id}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(nuevosDatos)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) alert(`Error: ${data.error}`);
-            else {
-                alert(data.mensaje); 
-                modificarModal.style.display = 'none';
-                cargarMovimientos(); 
-            }
-        });
+        try {
+            const response = await fetchAPI(`/api/movimientos/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(nuevosDatos)
+            });
+
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+
+            alert("Movimiento modificado correctamente.");
+            modificarModal.style.display = 'none';
+            cargarMovimientos(); 
+        } catch (error) {
+            alert(`Ocurrió un error al actualizar: ${error.message}`);
+        } finally {
+            btn.innerHTML = btnOriginalText;
+            btn.disabled = false;
+        }
     });
 
-    document.getElementById('confirmar-eliminacion').addEventListener('click', function() {
+    document.getElementById('confirmar-eliminacion').addEventListener('click', async function() {
         if (!movimientoIdParaEliminar) return; 
-        fetch(`/api/movimiento/${movimientoIdParaEliminar}`, { method: 'DELETE' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) alert(`Error: ${data.error}`);
-            else {
-                alert(data.mensaje); 
-                eliminarModal.style.display = 'none';
-                movimientoIdParaEliminar = null;
-                cargarMovimientos(); 
-            }
-        });
+        
+        const btn = this;
+        const textoOriginal = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+
+        try {
+            const response = await fetchAPI(`/api/movimientos/${movimientoIdParaEliminar}`, { method: 'DELETE' });
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+
+            alert("Movimiento eliminado correctamente.");
+            eliminarModal.style.display = 'none';
+            movimientoIdParaEliminar = null;
+            cargarMovimientos(); 
+        } catch (error) {
+            alert(`Error al eliminar: ${error.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = textoOriginal;
+        }
     });
 
     document.getElementById('close-detalles-modal').addEventListener('click', () => detallesModal.style.display = 'none');
@@ -537,7 +539,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('close-eliminar-multiple-modal').addEventListener('click', () => eliminarMultipleModal.style.display = 'none');
     document.getElementById('cancelar-eliminacion-multiple').addEventListener('click', () => eliminarMultipleModal.style.display = 'none');
     
-    // Exportaciones
     function getFiltrosComoURL() {
         const params = new URLSearchParams();
         if (fechaInicioInput.value) params.append('fecha_inicio', fechaInicioInput.value);
@@ -551,17 +552,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function descargarReporte(url, filename) {
         try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error("Error en servidor");
+            const response = await fetchAPI(url);
+            
+            if (!response.ok) {
+                let errText = "Error desconocido del servidor al generar reporte.";
+                try {
+                    const errJson = await response.json();
+                    errText = errJson.error || errText;
+                } catch(e) {}
+                throw new Error(errText);
+            }
+            
             const blob = await response.blob(); 
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.style.display = 'none'; a.href = downloadUrl; a.download = filename; 
-            document.body.appendChild(a); a.click();
-            window.URL.revokeObjectURL(downloadUrl); a.remove();
-        } catch (error) { alert(`Error al generar el reporte: ${error.message}`); }
+            a.style.display = 'none'; 
+            a.href = downloadUrl; 
+            a.download = filename; 
+            document.body.appendChild(a); 
+            a.click();
+            window.URL.revokeObjectURL(downloadUrl); 
+            a.remove();
+        } catch (error) { 
+            alert(`No se pudo generar el reporte: ${error.message}`); 
+        }
     }
     
-    exportPdfBtn.addEventListener('click', () => descargarReporte(`/api/exportar/pdf?${getFiltrosComoURL()}`, 'Reporte_Financiero.pdf'));
-    exportExcelBtn.addEventListener('click', () => descargarReporte(`/api/exportar/excel?${getFiltrosComoURL()}`, 'Reporte_Financiero.xlsx'));
+    if(exportPdfBtn) exportPdfBtn.addEventListener('click', () => descargarReporte(`/api/exportar/pdf?${getFiltrosComoURL()}`, 'Reporte_Financiero.pdf'));
+    // AQUÍ ESTÁ LA CORRECCIÓN CLAVE: .csv en lugar de .xlsx
+    if(exportExcelBtn) exportExcelBtn.addEventListener('click', () => descargarReporte(`/api/exportar/excel?${getFiltrosComoURL()}`, 'Reporte_Financiero.csv'));
 });

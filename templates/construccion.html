@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Módulo en Desarrollo - Puente Viejo</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/login_style.css') }}">
+    <link rel="stylesheet" href="/static/css/login_style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .construction-panel {
@@ -26,6 +26,7 @@
 </head>
 <body>
     <div class="carousel-background">
+        <!-- Puedes cambiar la URL por una de tus imágenes locales si prefieres: '/static/comida.jpg' -->
         <div class="carousel-slide active" style="background-image: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070');"></div>
     </div>
     <div class="overlay"></div>
@@ -33,18 +34,30 @@
     <div class="main-container" style="justify-content: center;">
         <div class="construction-panel">
             <i class="fas fa-hard-hat icon-build"></i>
-            <h2>¡Hola, {{ user.nombre }}!</h2>
-            <span class="role-badge">{{ user.rol }}</span>
+            <h2>¡Hola, <span id="user-name-display">Cargando...</span>!</h2>
+            <span class="role-badge" id="user-role-display">Rol</span>
             
             <p style="font-size: 1.1rem; color: #555; margin-bottom: 30px; line-height: 1.6;">
-                El módulo de <strong>{{ user.rol|upper }}</strong> está actualmente en fase de desarrollo. 
+                El módulo de este rol está actualmente en fase de desarrollo. 
                 <br>Pronto podrás acceder a tus funciones operativas aquí.
             </p>
 
-            <a href="{{ url_for('logout') }}" class="btn-login" style="text-decoration: none; display: inline-block;">
+            <a href="#" id="btn-logout" class="btn-login" style="text-decoration: none; display: inline-block;">
                 <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
             </a>
         </div>
     </div>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Pequeño script para rellenar los datos en esta pantalla específica
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('jwt_token');
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                document.getElementById('user-name-display').textContent = payload.nombre || payload.username;
+                document.getElementById('user-role-display').textContent = payload.rol;
+            }
+        });
+    </script>
 </body>
 </html>

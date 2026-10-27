@@ -115,8 +115,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 comentario: comentarioFinal
             };
 
-            // Enviar al API
-            fetch('/api/movimiento', {
+            // CORRECCIÓN: fetchAPI e inclusión de la s final en /api/movimientos
+            fetchAPI('/api/movimientos', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

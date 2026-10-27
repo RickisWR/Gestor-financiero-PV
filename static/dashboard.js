@@ -20,7 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
 
     function cargarResumen() {
-        fetch('/api/movimientos')
+        // CORRECCIÓN: Uso de fetchAPI
+        fetchAPI('/api/movimientos')
         .then(response => response.json())
         .then(data => {
             
@@ -78,15 +79,17 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             // Actualizar DOM (KPIs)
-            totalIngresosEl.textContent = formatCurrency(ingresosTotalesHistoricos);
-            totalEgresosEl.textContent = formatCurrency(egresosTotalesHistoricos);
+            if(totalIngresosEl) totalIngresosEl.textContent = formatCurrency(ingresosTotalesHistoricos);
+            if(totalEgresosEl) totalEgresosEl.textContent = formatCurrency(egresosTotalesHistoricos);
             const balanceTotal = ingresosTotalesHistoricos + egresosTotalesHistoricos;
-            totalAcumuladoEl.textContent = formatCurrency(balanceTotal);
             
-            if (balanceTotal >= 0) {
-                totalAcumuladoEl.className = 'positive-feedback';
-            } else {
-                totalAcumuladoEl.className = 'negative-feedback';
+            if(totalAcumuladoEl) {
+                totalAcumuladoEl.textContent = formatCurrency(balanceTotal);
+                if (balanceTotal >= 0) {
+                    totalAcumuladoEl.className = 'positive-feedback';
+                } else {
+                    totalAcumuladoEl.className = 'negative-feedback';
+                }
             }
 
             // Calcular Tendencia
@@ -101,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function calcularTendencia(actual, pasado) {
+        if(!mensajeTendenciaEl) return;
         let mensaje = "";
         let claseColor = "";
         let icono = "";
@@ -139,7 +143,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- GRÁFICA 1: PASTEL ---
     function renderizarGraficaPastel(datos) {
-        const ctx = document.getElementById('gastosChart').getContext('2d');
+        const canvas = document.getElementById('gastosChart');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
         if (chartGastos) chartGastos.destroy(); // Limpiar si ya existe
 
         const labels = {
@@ -169,7 +175,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- GRÁFICA 2: BARRAS ---
     function renderizarGraficaBarras(datosMeses) {
-        const ctx = document.getElementById('balanceChart').getContext('2d');
+        const canvas = document.getElementById('balanceChart');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
         if (chartBalance) chartBalance.destroy();
 
         // Convertir a array y ordenar cronológicamente
@@ -209,10 +217,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- NUEVO: Cargar Próximos Vencimientos (MANTENIDO IGUAL) ---
     function cargarVencimientos() {
-        fetch('/api/cuentas')
+        // CORRECCIÓN: Uso de fetchAPI
+        fetchAPI('/api/cuentas')
         .then(response => response.json())
         .then(data => {
             const listaEl = document.getElementById('lista-vencimientos');
+            if(!listaEl) return;
             listaEl.innerHTML = '';
 
             // Filtrar: Solo pendientes y con fecha límite

@@ -5,68 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - Puente Viejo</title>
     
-    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
-    
-    <!-- CSS Personalizado -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/login_style.css') }}">
-    
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)">
+    <link rel="icon" href="/static/logo.png">
+    <link rel="stylesheet" href="/static/css/login_style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
-    <!-- 1. Fondo Carrusel -->
     <div class="carousel-background">
-        <div class="carousel-slide active" style="background-image: url('{{ url_for('static', filename='familia.jpg') }}');"></div>
-        <div class="carousel-slide" style="background-image: url('{{ url_for('static', filename='comida.jpg') }}');"></div>
-        <div class="carousel-slide" style="background-image: url('{{ url_for('static', filename='picacho.jpg') }}');"></div>
-        <div class="carousel-slide" style="background-image: url('{{ url_for('static', filename='pa.jpg') }}');"></div>
-        <div class="carousel-slide" style="background-image: url('{{ url_for('static', filename='familia.jpg') }}');"></div>
+        <div class="carousel-slide active" style="background-image: url('/static/familia.jpg');"></div>
+        <div class="carousel-slide" style="background-image: url('/static/comida.jpg');"></div>
+        <div class="carousel-slide" style="background-image: url('/static/picacho.jpg');"></div>
+        <div class="carousel-slide" style="background-image: url('/static/pa.jpg');"></div>
+        <div class="carousel-slide" style="background-image: url('/static/familia.jpg');"></div>
     </div>
     
     <div class="overlay"></div>
 
-    <!-- 2. Marcos de Puerta (Efecto Visual) -->
     <div class="door-frame door-left"></div>
     <div class="door-frame door-right"></div>
 
-    <!-- 3. Contenido Principal -->
     <div class="main-container">
         
-        <!-- Lado Izquierdo: Bienvenida -->
         <div class="welcome-section">
             <h1>Bienvenido<br>de nuevo</h1>
             
             <div class="social-icons">
-                <a href="[https://www.facebook.com/PuenteViejoAgs?locale=es_LA](https://www.facebook.com/PuenteViejoAgs?locale=es_LA)" target="_blank" rel="noopener noreferrer" title="Facebook">
+                <a href="https://www.facebook.com/PuenteViejoAgs?locale=es_LA" target="_blank" rel="noopener noreferrer" title="Facebook">
                     <i class="fab fa-facebook-f"></i>
                 </a>
-                <a href="[https://www.instagram.com/puente_viejo_picacho](https://www.instagram.com/puente_viejo_picacho)" target="_blank" rel="noopener noreferrer" title="Instagram">
+                <a href="https://www.instagram.com/puente_viejo_picacho" target="_blank" rel="noopener noreferrer" title="Instagram">
                     <i class="fab fa-instagram"></i>
                 </a>
             </div>
         </div>
 
-        <!-- Lado Derecho: Panel Login -->
         <div class="login-section">
             <div class="login-panel">
                 <div class="login-logo">
-                    <!-- Logo usando Flask static -->
-                    <img src="{{ url_for('static', filename='logo.png' ) }}" alt="Puente Viejo" width="150">
+                    <img src="/static/logo.png" alt="Puente Viejo" width="150">
                 </div>
                 
                 <h3 class="login-title">Iniciar sesión</h3>
 
-                <!-- Mensajes de Error (Feedback) -->
-                {% with messages = get_flashed_messages() %}
-                    {% if messages %}
-                        <div class="flash-messages" style="display: block;">
-                            <i class="fas fa-exclamation-circle"></i> {{ messages[0] }}
-                        </div>
-                    {% endif %}
-                {% endwith %}
+                <div id="login-error" class="flash-messages" style="display: none; color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                    <i class="fas fa-exclamation-circle"></i> <span id="login-error-text"></span>
+                </div>
 
-                <form action="{{ url_for('login') }}" method="POST">
+                <form id="loginForm">
                     <div class="input-group">
                         <label for="username">Usuario</label>
                         <div class="input-wrapper">
@@ -93,37 +78,33 @@
                 </form>
 
                 <div style="text-align: center; margin-top: 15px; font-size: 0.85em; color: var(--marron-claro, #7f8c8d);">
-    Gestor Financiero & Operativo v4.0 Ric G<br>
-    <a href="{{ url_for('terminos') }}" style="color: var(--naranja-quemado, #d35400); text-decoration: none; font-weight: bold;">Términos</a> 
-    | 
-    <a href="{{ url_for('privacidad') }}" style="color: var(--naranja-quemado, #d35400); text-decoration: none; font-weight: bold;">Privacidad</a>
-</div>
+                    Gestor Financiero & Operativo v4.0 Ric G<br>
+                    <a href="/templates/terminos.html" style="color: var(--naranja-quemado, #d35400); text-decoration: none; font-weight: bold;">Términos</a> 
+                    | 
+                    <a href="/templates/privacidad.html" style="color: var(--naranja-quemado, #d35400); text-decoration: none; font-weight: bold;">Privacidad</a>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Script del Carrusel -->
     <script>
-        // CORRECCIÓN: Usar DOMContentLoaded evita bugs de carga
         document.addEventListener('DOMContentLoaded', function() {
             const slides = document.querySelectorAll('.carousel-slide');
             let currentSlide = 0;
 
             function nextSlide() {
                 if (slides.length === 0) return;
-                // Remover clase active de la actual
                 slides[currentSlide].classList.remove('active');
-                // Calcular siguiente
                 currentSlide = (currentSlide + 1) % slides.length;
-                // Activar siguiente
                 slides[currentSlide].classList.add('active');
             }
 
-            // Cambiar imagen cada 5 segundos
             if (slides.length > 1) {
                 setInterval(nextSlide, 5000);
             }
         });
     </script>
+    <!-- Script con la ubicación exacta -->
+    <script src="/static/js/auth.js"></script>
 </body>
 </html>

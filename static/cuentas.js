@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
 
-    // 1. VERIFICACIÓN DE ELEMENTOS
     const tableBody = document.getElementById('cuentas-table-body');
     const formNuevaCuenta = document.getElementById('cuentas-form');
     
@@ -9,7 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // Selectores
     const buscadorInput = document.getElementById('buscador-cuentas');
     const fechaInicioInput = document.getElementById('fecha-inicio-cuentas');
     const fechaFinInput = document.getElementById('fecha-fin-cuentas');
@@ -20,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportPdfBtn = document.getElementById('btn-export-pdf-cuentas');
     const exportExcelBtn = document.getElementById('btn-export-excel-cuentas');
 
-    // Modales Originales
     const abonarModal = document.getElementById('abonar-modal');
     const pagarModal = document.getElementById('pagar-modal');
     const eliminarCuentaModal = document.getElementById('eliminar-cuenta-modal');
@@ -36,22 +33,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelarEliminarCuentaBtn = document.getElementById('cancelar-eliminar-cuenta');
     const confirmarEliminarCuentaBtn = document.getElementById('confirmar-eliminar-cuenta');
 
-    // Modales Nuevos (Historial, Edición de Abono y Edición de Cuenta Principal)
     const historialModal = document.getElementById('historial-abonos-modal');
     const editarAbonoModal = document.getElementById('editar-abono-modal');
-    const editarCuentaModal = document.getElementById('editar-cuenta-modal'); // NUEVO
+    const editarCuentaModal = document.getElementById('editar-cuenta-modal'); 
     
     const closeHistorial = document.getElementById('close-historial-modal');
     const closeEditarAbono = document.getElementById('close-editar-abono-modal');
-    const closeEditarCuenta = document.getElementById('close-editar-cuenta-modal'); // NUEVO
+    const closeEditarCuenta = document.getElementById('close-editar-cuenta-modal'); 
     
     const editarAbonoForm = document.getElementById('editar-abono-form');
-    const editarCuentaForm = document.getElementById('editar-cuenta-form'); // NUEVO
+    const editarCuentaForm = document.getElementById('editar-cuenta-form'); 
 
     let todasLasCuentas = []; 
     let cuentaDataParaAccion = {};
 
-    // Utilería
     function formatCurrency(value) {
         try {
             const num = Number(value);
@@ -59,13 +54,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) { return "$ Error"; }
     }
 
-    // Poner fecha de hoy por defecto
     const fechaCreditoInput = document.getElementById('fecha-credito');
     if (fechaCreditoInput) fechaCreditoInput.value = new Date().toISOString().split('T')[0];
 
-    // =========================================================
-    // 1. CARGAR Y DIBUJAR TABLA (MENÚ EN EL PROVEEDOR)
-    // =========================================================
     function actualizarTablaCuentas() {
         const termino = buscadorInput.value.toLowerCase();
         const fInicio = fechaInicioInput.value;
@@ -78,19 +69,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const saldo = cuenta.monto_total - cuenta.monto_abonado;
             const estado = (saldo <= 0.01 || cuenta.estado === 'Pagado') ? 'Pagado' : 'Pendiente';
 
-            // Filtros
             if (termino && !cuenta.proveedor.toLowerCase().includes(termino)) return;
             if (fInicio && cuenta.fecha_credito < fInicio) return;
             if (fFin && cuenta.fecha_credito > fFin) return;
 
             if (estado === 'Pendiente') saldoTotalVisible += saldo;
 
-            // Formatear fecha límite
             const vencimientoHTML = cuenta.fecha_limite ? 
                 `<span style="color: #c0392b; font-weight: bold;">${cuenta.fecha_limite}</span>` : 
                 '<span style="color: #aaa;">-</span>';
 
-            // MENÚ FLOTANTE INTEGRADO EN EL NOMBRE DEL PROVEEDOR (Ahora con "Modificar Detalles")
             let proveedorHTML = `
             <td class="concepto-cell">
                 <div class="concepto-interactivo">
@@ -142,17 +130,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if(totalSaldoBottom) totalSaldoBottom.textContent = totalFmt;
     }
 
-    window.cargarCuentas = function() {
-         fetch('/api/cuentas')
-         .then(res => res.json())
-         .then(data => { 
-             if(data.error) console.error(data.error);
-             else {
-                 todasLasCuentas = data; 
-                 actualizarTablaCuentas(); 
-             }
-         })
-         .catch(error => console.error("Error de red:", error));
+    window.cargarCuentas = async function() {
+        try {
+            const res = await fetchAPI('/api/cuentas');
+            const data = await res.json();
+            if(!data.error) {
+                todasLasCuentas = data; 
+                actualizarTablaCuentas(); 
+            }
+        } catch(error) {
+            console.error("Error de red:", error);
+        }
     };
 
     if(buscadorInput) buscadorInput.addEventListener('keyup', actualizarTablaCuentas);
@@ -161,10 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     window.cargarCuentas(); 
 
-    // =========================================================
-    // 2. AGREGAR NUEVA CUENTA
-    // =========================================================
-    formNuevaCuenta.addEventListener('submit', function(e) {
+    formNuevaCuenta.addEventListener('submit', async function(e) {
         e.preventDefault(); 
         
         const proveedorVal = document.getElementById('proveedor').value;
@@ -176,36 +161,35 @@ document.addEventListener('DOMContentLoaded', function() {
             proveedor: proveedorVal,
             fecha_credito: fechaVal,
             monto_total: parseFloat(montoVal),
-            fecha_limite: fechaLimiteInput ? fechaLimiteInput.value : null 
+            fecha_limite: fechaLimiteInput && fechaLimiteInput.value ? fechaLimiteInput.value : null 
         };
 
-        fetch('/api/cuentas', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(datos)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.error) {
-                alert("Error del servidor: " + data.error);
-            } else {
-                alert("¡Cuenta registrada correctamente!"); 
-                formNuevaCuenta.reset();
-                if(fechaCreditoInput) fechaCreditoInput.value = new Date().toISOString().split('T')[0];
-                window.cargarCuentas(); 
-            }
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            alert("Error de conexión. Revisa la consola.");
-        });
+        const btn = this.querySelector('button');
+        const textBtn = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Guardando...';
+
+        try {
+            const response = await fetchAPI('/api/cuentas', {
+                method: 'POST',
+                body: JSON.stringify(datos)
+            });
+            const data = await response.json();
+            if(data.error) throw new Error(data.error);
+            
+            alert("¡Cuenta registrada correctamente!"); 
+            formNuevaCuenta.reset();
+            if(fechaCreditoInput) fechaCreditoInput.value = new Date().toISOString().split('T')[0];
+            window.cargarCuentas(); 
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = textBtn;
+        }
     });
 
-    // =========================================================
-    // 3. MANEJO DEL MENÚ FLOTANTE Y ACCIONES PRINCIPALES
-    // =========================================================
     tableBody.addEventListener('click', function(event) {
-        // 1. Abrir/Cerrar menú flotante
         const menuTrigger = event.target.closest('.concepto-texto');
         if (menuTrigger) {
             event.stopPropagation();
@@ -218,7 +202,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // 2. Click en una opción del menú
         const actionBtn = event.target.closest('.btn-accion-cuenta');
         if (actionBtn) {
             event.preventDefault();
@@ -231,7 +214,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (accion === 'historial') {
                 abrirHistorial(cuentaDataParaAccion);
             } else if (accion === 'editar-cuenta') {
-                // NUEVA LÓGICA: Abrir el modal de editar la cuenta principal
                 document.getElementById('edit-cuenta-id').value = cuentaDataParaAccion.id;
                 document.getElementById('edit-cuenta-proveedor').value = cuentaDataParaAccion.proveedor;
                 document.getElementById('edit-cuenta-fecha').value = cuentaDataParaAccion.fecha;
@@ -257,125 +239,144 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Cerrar menús al hacer clic afuera
     window.addEventListener('click', function(event) {
         if (!event.target.closest('.concepto-texto') && !event.target.closest('.menu-flotante')) {
             document.querySelectorAll('.menu-flotante.mostrar').forEach(menu => menu.classList.remove('mostrar'));
         }
     });
 
-    // =========================================================
-    // 4. ENVÍO DE FORMULARIOS ORIGINALES Y NUEVO (Editar Cuenta)
-    // =========================================================
-
-    // NUEVO: Formulario para editar la cuenta maestra
-    editarCuentaForm.addEventListener('submit', function(event) {
+    editarCuentaForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const id = document.getElementById('edit-cuenta-id').value;
-        const limiteVal = document.getElementById('edit-cuenta-limite').value;
+        const cuentaActual = todasLasCuentas.find(c => c.id == id);
         
+        if (!cuentaActual) return;
+
+        const limiteVal = document.getElementById('edit-cuenta-limite').value;
+        const nuevoMontoTotal = parseFloat(document.getElementById('edit-cuenta-monto').value);
+        
+        if (nuevoMontoTotal < cuentaActual.monto_abonado) {
+            alert("Error: El monto total de la deuda no puede ser menor a lo que ya has abonado en el historial.");
+            return;
+        }
+
+        const nuevoEstado = (nuevoMontoTotal - cuentaActual.monto_abonado <= 0.01) ? 'Pagado' : 'Pendiente';
+
         const datos = {
+            ...cuentaActual,
             proveedor: document.getElementById('edit-cuenta-proveedor').value,
             fecha_credito: document.getElementById('edit-cuenta-fecha').value,
             fecha_limite: limiteVal ? limiteVal : null,
-            monto_total: parseFloat(document.getElementById('edit-cuenta-monto').value)
+            monto_total: nuevoMontoTotal,
+            estado: nuevoEstado
         };
 
-        fetch(`/api/cuentas/${id}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(datos)
-        })
-        .then(r => r.json())
-        .then(data => {
-            if(data.error) alert("Error: " + data.error);
-            else {
-                alert("Cuenta modificada con éxito.");
-                editarCuentaModal.style.display = 'none';
-                window.cargarCuentas();
-            }
-        })
-        .catch(e => console.error(e));
+        try {
+            const r = await fetchAPI(`/api/cuentas/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(datos)
+            });
+            const data = await r.json();
+            if(data.error) throw new Error(data.error);
+            
+            alert("Cuenta modificada con éxito.");
+            editarCuentaModal.style.display = 'none';
+            window.cargarCuentas();
+        } catch (e) {
+            alert(`Ocurrió un error: ${e.message}`);
+        }
     });
 
-
-    abonarForm.addEventListener('submit', function(event) {
+    abonarForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const monto = parseFloat(document.getElementById('monto-abono').value);
         const metodo = document.getElementById('abonar-metodo').value;
         const id = document.getElementById('abonar-cuenta-id').value;
 
         if (monto > parseFloat(cuentaDataParaAccion.saldo) + 0.01) {
-             alert("El abono no puede ser mayor a la deuda.");
+             alert("El abono no puede ser mayor a la deuda restante.");
              return;
         }
 
-        fetch('/api/abono', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ cuenta_id: id, monto_abono: monto, metodo: metodo })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if(data.error) alert("Error: " + data.error);
-            else {
-                alert("Abono registrado con éxito.");
-                abonarModal.style.display = 'none';
-                this.reset();
-                window.cargarCuentas();
-            }
-        })
-        .catch(e => console.error(e));
+        try {
+            const cuenta = todasLasCuentas.find(c => c.id == id);
+            const nuevoAbonado = parseFloat(cuenta.monto_abonado) + monto;
+            const nuevoEstado = (cuenta.monto_total - nuevoAbonado <= 0.01) ? 'Pagado' : 'Pendiente';
+
+            await fetchAPI(`/api/cuentas/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({...cuenta, monto_abonado: nuevoAbonado, estado: nuevoEstado})
+            });
+
+            const hoy = new Date().toISOString().split('T')[0];
+            await fetchAPI('/api/movimientos', {
+                method: 'POST',
+                body: JSON.stringify({
+                    fecha: hoy, concepto: `Abono a cuenta: ${cuenta.proveedor}`, tipo: 'egreso',
+                    monto: -Math.abs(monto), metodo: metodo, clasificacion: 'compra', cuenta_id: id
+                })
+            });
+
+            alert("Abono registrado con éxito.");
+            abonarModal.style.display = 'none';
+            this.reset();
+            window.cargarCuentas();
+        } catch (e) {
+            alert(`Error al registrar abono: ${e.message}`);
+        }
     });
 
-    pagarForm.addEventListener('submit', function(event) {
+    pagarForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const metodo = document.getElementById('pagar-metodo').value;
         const id = document.getElementById('pagar-cuenta-id').value;
         const saldo = parseFloat(cuentaDataParaAccion.saldo);
 
-        fetch('/api/saldar', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ cuenta_id: id, saldo_a_pagar: saldo, metodo: metodo })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if(data.error) alert("Error: " + data.error);
-            else {
-                alert("Cuenta saldada con éxito.");
-                pagarModal.style.display = 'none';
-                this.reset();
-                window.cargarCuentas();
-            }
-        })
-        .catch(e => console.error(e));
+        try {
+            const cuenta = todasLasCuentas.find(c => c.id == id);
+            const nuevoAbonado = parseFloat(cuenta.monto_abonado) + saldo;
+
+            await fetchAPI(`/api/cuentas/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({...cuenta, monto_abonado: nuevoAbonado, estado: 'Pagado'})
+            });
+
+            const hoy = new Date().toISOString().split('T')[0];
+            await fetchAPI('/api/movimientos', {
+                method: 'POST',
+                body: JSON.stringify({
+                    fecha: hoy, concepto: `Liquidación de cuenta: ${cuenta.proveedor}`, tipo: 'egreso',
+                    monto: -Math.abs(saldo), metodo: metodo, clasificacion: 'compra', cuenta_id: id
+                })
+            });
+
+            alert("Cuenta saldada con éxito.");
+            pagarModal.style.display = 'none';
+            this.reset();
+            window.cargarCuentas();
+        } catch (e) {
+            alert(`Error al saldar cuenta: ${e.message}`);
+        }
     });
     
     if(confirmarEliminarCuentaBtn) {
-        confirmarEliminarCuentaBtn.addEventListener('click', function() {
+        confirmarEliminarCuentaBtn.addEventListener('click', async function() {
             if (!cuentaDataParaAccion || !cuentaDataParaAccion.id) return;
             
-            fetch(`/api/cuentas/${cuentaDataParaAccion.id}`, {
-                method: 'DELETE'
-            })
-            .then(r => r.json())
-            .then(data => {
-                if(data.error) {
-                    alert("Error: " + data.error);
-                } else {
-                    alert("Cuenta y sus abonos eliminados con éxito.");
-                    eliminarCuentaModal.style.display = 'none';
-                    window.cargarCuentas();
-                }
-            })
-            .catch(e => console.error(e));
+            try {
+                const r = await fetchAPI(`/api/cuentas/${cuentaDataParaAccion.id}`, { method: 'DELETE' });
+                const data = await r.json();
+                if(data.error) throw new Error(data.error);
+                
+                alert("Cuenta y sus abonos eliminados con éxito.");
+                eliminarCuentaModal.style.display = 'none';
+                window.cargarCuentas();
+            } catch (e) {
+                alert(`Ocurrió un error: ${e.message}`);
+            }
         });
     }
 
-    // =========================================================
-    // 5. LÓGICA DEL HISTORIAL Y EDICIÓN DE ABONOS
-    // =========================================================
     function abrirHistorial(data) {
         document.getElementById('hist-proveedor-nombre').textContent = data.proveedor;
         document.getElementById('hist-total').textContent = formatCurrency(data.total);
@@ -387,9 +388,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function cargarAbonos(cuentaId, proveedor) {
-        fetch(`/api/cuentas/${cuentaId}/abonos`)
+        fetchAPI(`/api/movimientos`)
             .then(res => res.json())
-            .then(abonos => {
+            .then(todos => {
+                const abonos = todos.filter(m => m.cuenta_id == cuentaId);
                 const tbody = document.getElementById('historial-abonos-body');
                 tbody.innerHTML = '';
                 
@@ -407,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>${ab.metodo}</td>
                             <td>
                                 <button class="btn btn-secondary btn-sm" onclick="abrirEditarAbono(${ab.id}, '${ab.fecha}', ${montoPositivo}, '${ab.metodo}', '${ab.concepto}', ${cuentaId}, '${proveedor}')" title="Editar"><i class="fas fa-edit"></i></button>
-                                <button class="btn btn-eliminar btn-sm" onclick="eliminarAbono(${ab.id}, ${cuentaId}, '${proveedor}')" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                <button class="btn btn-eliminar btn-sm" onclick="eliminarAbono(${ab.id}, ${cuentaId}, '${proveedor}', ${montoPositivo})" title="Eliminar"><i class="fas fa-trash"></i></button>
                             </td>
                         </tr>
                     `;
@@ -415,10 +417,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    window.abrirEditarAbono = function(id, fecha, monto, metodo, concepto, cuentaId, proveedor) {
+    window.abrirEditarAbono = function(id, fecha, montoOriginal, metodo, concepto, cuentaId, proveedor) {
         document.getElementById('edit-abono-id').value = id;
         document.getElementById('edit-abono-fecha').value = fecha;
-        document.getElementById('edit-abono-monto').value = monto;
+        
+        const inputMonto = document.getElementById('edit-abono-monto');
+        inputMonto.value = montoOriginal;
+        inputMonto.dataset.original = montoOriginal; 
+
         document.getElementById('edit-abono-metodo').value = metodo;
         document.getElementById('edit-abono-concepto').value = concepto;
         document.getElementById('edit-abono-cuenta-id').value = cuentaId;
@@ -426,76 +432,109 @@ document.addEventListener('DOMContentLoaded', function() {
         editarAbonoModal.style.display = 'flex';
     };
 
-    window.eliminarAbono = function(id, cuentaId, proveedor) {
-        if(confirm("¿Estás seguro de eliminar este abono? El saldo pendiente de la cuenta aumentará automáticamente.")) {
-            fetch(`/api/movimiento/${id}`, { method: 'DELETE' })
-            .then(r => r.json())
-            .then(data => {
-                if(data.error) alert("Error: " + data.error);
-                else {
-                    cargarAbonos(cuentaId, proveedor);
-                    window.cargarCuentas(); 
-                    
-                    setTimeout(() => {
-                        const cuentaActualizada = todasLasCuentas.find(c => c.id == cuentaId);
-                        if (cuentaActualizada) {
-                            document.getElementById('hist-abonado').textContent = formatCurrency(cuentaActualizada.monto_abonado);
-                            document.getElementById('hist-pendiente').textContent = formatCurrency(cuentaActualizada.monto_total - cuentaActualizada.monto_abonado);
-                        }
-                    }, 500);
-                }
-            });
-        }
-    };
-
-    editarAbonoForm.addEventListener('submit', function(e) {
+    editarAbonoForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const id = document.getElementById('edit-abono-id').value;
         const cuentaId = document.getElementById('edit-abono-cuenta-id').value;
         const proveedor = document.getElementById('hist-proveedor-temp').value;
         
-        const datos = {
-            fecha: document.getElementById('edit-abono-fecha').value,
-            concepto: document.getElementById('edit-abono-concepto').value,
-            monto: -Math.abs(parseFloat(document.getElementById('edit-abono-monto').value)), 
-            metodo: document.getElementById('edit-abono-metodo').value,
-            clasificacion: 'compra',
-            tipo: 'egreso'
-        };
+        const montoNuevo = Math.abs(parseFloat(document.getElementById('edit-abono-monto').value));
+        const montoOriginal = parseFloat(document.getElementById('edit-abono-monto').dataset.original);
+        const diferencia = montoNuevo - montoOriginal;
 
-        fetch(`/api/movimiento/${id}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(datos)
-        })
-        .then(r => r.json())
-        .then(data => {
-            if(data.error) alert("Error: " + data.error);
-            else {
-                editarAbonoModal.style.display = 'none';
-                cargarAbonos(cuentaId, proveedor); 
-                window.cargarCuentas(); 
+        const cuentaActual = todasLasCuentas.find(c => c.id == cuentaId);
+        if (!cuentaActual) return;
+
+        const nuevoAbonado = parseFloat(cuentaActual.monto_abonado) + diferencia;
+
+        if (nuevoAbonado > cuentaActual.monto_total + 0.01) {
+            alert("Error: El nuevo monto del abono excede el saldo restante de la deuda.");
+            return;
+        }
+
+        const nuevoEstado = (cuentaActual.monto_total - nuevoAbonado <= 0.01) ? 'Pagado' : 'Pendiente';
+
+        try {
+            const datosMov = {
+                fecha: document.getElementById('edit-abono-fecha').value,
+                concepto: document.getElementById('edit-abono-concepto').value,
+                monto: -montoNuevo, 
+                metodo: document.getElementById('edit-abono-metodo').value,
+                clasificacion: 'compra',
+                tipo: 'egreso',
+                cuenta_id: cuentaId
+            };
+            
+            const rMov = await fetchAPI(`/api/movimientos/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(datosMov)
+            });
+            const dataMov = await rMov.json();
+            if (dataMov.error) throw new Error(dataMov.error);
+
+            const rCuenta = await fetchAPI(`/api/cuentas/${cuentaId}`, {
+                method: 'PUT',
+                body: JSON.stringify({...cuentaActual, monto_abonado: nuevoAbonado, estado: nuevoEstado})
+            });
+            const dataCuenta = await rCuenta.json();
+            if (dataCuenta.error) throw new Error(dataCuenta.error);
+
+            alert("Abono corregido con éxito.");
+            editarAbonoModal.style.display = 'none';
+            await window.cargarCuentas(); 
+
+            setTimeout(() => {
+                const cuentaActualizada = todasLasCuentas.find(c => c.id == cuentaId);
+                if (cuentaActualizada) {
+                    document.getElementById('hist-abonado').textContent = formatCurrency(cuentaActualizada.monto_abonado);
+                    document.getElementById('hist-pendiente').textContent = formatCurrency(cuentaActualizada.monto_total - cuentaActualizada.monto_abonado);
+                    cargarAbonos(cuentaId, proveedor);
+                }
+            }, 300);
+
+        } catch(error) {
+            alert(`Error de sincronización: ${error.message}`);
+        }
+    });
+
+    window.eliminarAbono = async function(id, cuentaId, proveedor, montoAbono) {
+        if(confirm("¿Estás seguro de eliminar este abono? El saldo pendiente de la cuenta aumentará automáticamente.")) {
+            try {
+                const cuentaActual = todasLasCuentas.find(c => c.id == cuentaId);
+                const nuevoAbonado = parseFloat(cuentaActual.monto_abonado) - montoAbono;
+                const nuevoEstado = (cuentaActual.monto_total - nuevoAbonado <= 0.01) ? 'Pagado' : 'Pendiente';
+
+                const resDel = await fetchAPI(`/api/movimientos/${id}`, { method: 'DELETE' });
+                const dataDel = await resDel.json();
+                if(dataDel.error) throw new Error(dataDel.error);
+
+                await fetchAPI(`/api/cuentas/${cuentaId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({...cuentaActual, monto_abonado: nuevoAbonado, estado: nuevoEstado})
+                });
+
+                await window.cargarCuentas();
                 
                 setTimeout(() => {
                     const cuentaActualizada = todasLasCuentas.find(c => c.id == cuentaId);
                     if (cuentaActualizada) {
                         document.getElementById('hist-abonado').textContent = formatCurrency(cuentaActualizada.monto_abonado);
                         document.getElementById('hist-pendiente').textContent = formatCurrency(cuentaActualizada.monto_total - cuentaActualizada.monto_abonado);
+                        cargarAbonos(cuentaId, proveedor);
                     }
-                }, 500);
+                }, 300);
+            } catch (error) {
+                alert(`Ocurrió un problema: ${error.message}`);
             }
-        });
-    });
+        }
+    };
 
-    // =========================================================
-    // 6. CERRAR MODALES
-    // =========================================================
     if(closeAbonar) closeAbonar.addEventListener('click', () => { abonarModal.style.display = 'none'; abonarForm.reset(); });
     if(closePagar) closePagar.addEventListener('click', () => { pagarModal.style.display = 'none'; pagarForm.reset(); });
     if(closeEliminarCuenta) closeEliminarCuenta.addEventListener('click', () => { eliminarCuentaModal.style.display = 'none'; });
     if(closeHistorial) closeHistorial.addEventListener('click', () => { historialModal.style.display = 'none'; });
     if(closeEditarAbono) closeEditarAbono.addEventListener('click', () => { editarAbonoModal.style.display = 'none'; });
-    if(closeEditarCuenta) closeEditarCuenta.addEventListener('click', () => { editarCuentaModal.style.display = 'none'; }); // NUEVO
+    if(closeEditarCuenta) closeEditarCuenta.addEventListener('click', () => { editarCuentaModal.style.display = 'none'; }); 
     
     if(cancelarPagoBtn) cancelarPagoBtn.addEventListener('click', () => { pagarModal.style.display = 'none'; pagarForm.reset(); });
     if(cancelarEliminarCuentaBtn) cancelarEliminarCuentaBtn.addEventListener('click', () => { eliminarCuentaModal.style.display = 'none'; });
@@ -506,12 +545,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target == eliminarCuentaModal) { eliminarCuentaModal.style.display = 'none'; }
         if (e.target == historialModal) { historialModal.style.display = 'none'; }
         if (e.target == editarAbonoModal) { editarAbonoModal.style.display = 'none'; }
-        if (e.target == editarCuentaModal) { editarCuentaModal.style.display = 'none'; } // NUEVO
+        if (e.target == editarCuentaModal) { editarCuentaModal.style.display = 'none'; }
     });
 
-    // =========================================================
-    // 7. EXPORTACIÓN
-    // =========================================================
     function getFiltrosURL() {
         const params = new URLSearchParams();
         if (fechaInicioInput.value) params.append('fecha_inicio', fechaInicioInput.value);
@@ -520,16 +556,26 @@ document.addEventListener('DOMContentLoaded', function() {
         return params.toString();
     }
 
-    if(exportPdfBtn) {
-        exportPdfBtn.addEventListener('click', () => {
-            const url = `/api/exportar/cuentas/pdf?${getFiltrosURL()}`;
-            window.open(url, '_blank'); 
-        });
+    async function descargarReporteCuentas(url, filename) {
+        try {
+            const response = await fetchAPI(url);
+            if (!response.ok) throw new Error("Error en el servidor al generar reporte.");
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none'; 
+            a.href = downloadUrl; 
+            a.download = filename;
+            document.body.appendChild(a); 
+            a.click();
+            window.URL.revokeObjectURL(downloadUrl); 
+            a.remove();
+        } catch (error) { 
+            alert(`No se pudo exportar: ${error.message}`); 
+        }
     }
-    if(exportExcelBtn) {
-        exportExcelBtn.addEventListener('click', () => {
-            const url = `/api/exportar/cuentas/excel?${getFiltrosURL()}`;
-            window.open(url, '_blank');
-        });
-    }
+
+    if(exportPdfBtn) exportPdfBtn.addEventListener('click', () => descargarReporteCuentas(`/api/exportar/cuentas/pdf?${getFiltrosURL()}`, 'Cuentas_Por_Pagar.pdf'));
+    // AQUÍ ESTÁ LA CORRECCIÓN CLAVE: .csv en lugar de .xlsx
+    if(exportExcelBtn) exportExcelBtn.addEventListener('click', () => descargarReporteCuentas(`/api/exportar/cuentas/excel?${getFiltrosURL()}`, 'Cuentas_Por_Pagar.csv'));
 });

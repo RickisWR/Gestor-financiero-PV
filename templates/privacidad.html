@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aviso de Privacidad - Gestor Financiero</title>
-    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}" type="image/x-icon">
+    <link rel="icon" href="/static/logo.png" type="image/x-icon">
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/1_base.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/2_layout.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/3_components.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/5_pages.css') }}">
+    <link rel="stylesheet" href="/static/css/1_base.css">
+    <link rel="stylesheet" href="/static/css/2_layout.css">
+    <link rel="stylesheet" href="/static/css/3_components.css">
+    <link rel="stylesheet" href="/static/css/5_pages.css">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
@@ -60,9 +60,10 @@
         }
     </style>
 </head>
-<body style="background-color: #f4f1ea;"> <div class="legal-container">
+<body style="background-color: #f4f1ea;"> 
+    <div class="legal-container">
         <div class="legal-header">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height: 60px; margin-bottom: 15px;">
+            <img src="/static/logo.png" alt="Logo" style="height: 60px; margin-bottom: 15px;">
             <h1>Aviso de Privacidad</h1>
             <p>Gestor Financiero e Inventario "Puente Viejo"</p>
         </div>
@@ -94,8 +95,8 @@
         </div>
 
         <div class="legal-section">
-            <h2><i class="fas fa-cookie-bite"></i> 4. Uso de Cookies</h2>
-            <p>Este sistema utiliza "cookies de sesión" técnicas que son estrictamente necesarias para mantener su sesión abierta de forma segura mientras navega por las páginas del gestor. No utilizamos cookies para rastreo publicitario ni compartimos su información con terceros.</p>
+            <h2><i class="fas fa-cookie-bite"></i> 4. Uso de Cookies y Tokens</h2>
+            <p>Este sistema utiliza "JSON Web Tokens (JWT)" estrictamente necesarios para mantener su sesión abierta de forma segura mientras navega por las páginas del gestor. No utilizamos cookies para rastreo publicitario ni compartimos su información con terceros.</p>
         </div>
 
         <div class="legal-section">
@@ -104,11 +105,10 @@
         </div>
 
         <center>
-            <a href="{{ url_for('login') }}" class="back-link">
+            <a href="/templates/login.html" class="back-link">
                 <i class="fas fa-arrow-left"></i> Volver al Inicio de Sesión
             </a>
         </center>
     </div>
-
 </body>
 </html>

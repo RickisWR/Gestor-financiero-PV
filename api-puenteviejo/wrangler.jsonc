@@ -1,0 +1,12 @@
+{
+  "name": "api-puenteviejo",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-03-20",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gestor-puenteviejo-db",
+      "database_id": "2fb4bf6a-b738-43e9-92b8-2d61e30facab"
+    }
+  ]
+}

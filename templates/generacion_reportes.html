@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generación de Reportes - Gestor Financiero</title>
-    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}" type="image/x-icon">
+    <link rel="icon" href="/static/logo.png" type="image/x-icon">
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/1_base.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/2_layout.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/3_components.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/4_forms_tables.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/5_pages.css') }}">
+    <link rel="stylesheet" href="/static/css/1_base.css">
+    <link rel="stylesheet" href="/static/css/2_layout.css">
+    <link rel="stylesheet" href="/static/css/3_components.css">
+    <link rel="stylesheet" href="/static/css/4_forms_tables.css">
+    <link rel="stylesheet" href="/static/css/5_pages.css">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -21,24 +21,13 @@
                 <h2>Menú Principal</h2>
             </div>
             <nav class="sidebar-nav">
-                 <ul>
-        <!-- 1. Enlace de Gestión de Usuarios (SOLO ADMIN Y JEFE) -->
-        {% if current_user.rol in ['admin', 'jefe'] %}
-        <li>
-            <a href="{{ url_for('usuarios_page') }}" class="{{ 'active' if request.path == '/usuarios' else '' }}">
-                <i class="fas fa-users-cog"></i><span>Usuarios</span>
-            </a>
-        </li>
-        {% endif %}
-        
-        <!-- 2. Enlaces del Sistema Financiero (TODOS MENOS ADMIN) -->
-        {% if current_user.rol != 'admin' %}
-        <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i><span>Inicio</span></a></li>
-        <li><a href="{{ url_for('registro') }}"><i class="fas fa-exchange-alt"></i><span>Registro</span></a></li>
-        <li><a href="{{ url_for('reportes') }}"><i class="fas fa-chart-bar"></i><span>Reportes</span></a></li>
-        <li><a href="{{ url_for('cuentas') }}"><i class="fas fa-file-invoice-dollar"></i><span>Cuentas</span></a></li>
-        {% endif %}
-    </ul>
+                <ul id="main-menu">
+                    <li class="admin-only"><a href="/templates/usuarios.html"><i class="fas fa-users-cog"></i><span>Usuarios</span></a></li>
+                    <li><a href="/templates/index.html"><i class="fas fa-home"></i><span>Inicio</span></a></li>
+                    <li><a href="/templates/registro_movimientos.html"><i class="fas fa-exchange-alt"></i><span>Registro</span></a></li>
+                    <li><a href="/templates/generacion_reportes.html" class="active"><i class="fas fa-chart-bar"></i><span>Reportes</span></a></li>
+                    <li><a href="/templates/cuentas_por_pagar.html"><i class="fas fa-file-invoice-dollar"></i><span>Cuentas</span></a></li>
+                </ul>
             </nav>
         </aside>
 
@@ -51,8 +40,20 @@
                         <p>Consulta el historial de movimientos y el balance acumulado.</p>
                     </div>
                 </div>
-                <div class="header-logo">
-                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo de la Franquicia">
+                
+                <div class="user-menu-container">
+                    <div class="user-trigger" onclick="toggleUserMenu()">
+                        <div class="header-logo">
+                            <img src="/static/logo.png" alt="Logo de la Franquicia">
+                        </div>
+                        <span style="margin-left:10px; font-weight:bold; color:var(--marron-oscuro); cursor: pointer;">
+                            <span id="user-name-display">Cargando...</span> <i class="fas fa-caret-down"></i>
+                        </span>
+                    </div>
+                    <div id="user-dropdown" class="user-dropdown-content">
+                        <a href="/templates/perfil_usuario.html"><i class="fas fa-user-cog"></i> Configurar Usuario</a>
+                        <a href="#" id="btn-logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+                    </div>
                 </div>
             </header>
 
@@ -133,7 +134,6 @@
         </main>
     </div>
 
-    <!-- Modales -->
     <div id="detalles-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <span class="modal-close" id="close-detalles-modal">&times;</span>
@@ -152,7 +152,6 @@
         </div>
     </div>
 
-    <!-- Modal Modificar -->
     <div id="modificar-modal" class="modal-overlay" style="display: none;">
          <div class="modal-content">
             <span class="modal-close" id="close-modificar-modal">&times;</span>
@@ -190,13 +189,10 @@
                         </select>
                     </div>
                  </div>
-
-                 <!-- NUEVO: Campos Mixtos Modificar (Ocultos por defecto) -->
                  <div class="form-row" id="modificar-campos-mixto" style="display: none; background-color: var(--crema-suave); padding: 10px; border-radius: 8px; border: 1px dashed var(--gris-plateado); margin-bottom: 15px;">
                      <div class="form-group" style="margin-bottom: 0;"><label style="color: var(--naranja-quemado);"><i class="fas fa-money-bill-wave"></i> Efectivo</label><input type="number" id="modificar-monto-efectivo" step="0.01" min="0"></div>
                      <div class="form-group" style="margin-bottom: 0;"><label style="color: #3498db;"><i class="fas fa-credit-card"></i> Banco</label><input type="number" id="modificar-monto-banco" step="0.01" min="0"></div>
                  </div>
-
                  <div class="form-group" id="modificar-clasificacion-div">
                     <label for="modificar-clasificacion">Clasificación Específica</label>
                     <select id="modificar-clasificacion" required>
@@ -208,13 +204,10 @@
                         <option value="otro">Otro</option>
                     </select>
                 </div>
-
-                <!-- NUEVO: Campo de Comentario (Vital para editar Mixtos sin perder datos) -->
                 <div class="form-group">
                     <label for="modificar-comentario">Comentario</label>
                     <textarea id="modificar-comentario"></textarea>
                 </div>
-
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Cambios</button>
                 </div>
@@ -222,7 +215,6 @@
         </div>
     </div>
     
-    <!-- Modal Eliminar Simple -->
     <div id="eliminar-modal" class="modal-overlay" style="display: none;">
          <div class="modal-content small-modal">
             <span class="modal-close" id="close-eliminar-modal">&times;</span>
@@ -235,7 +227,6 @@
         </div>
     </div>
     
-    <!-- Modal Eliminar Múltiple -->
     <div id="eliminar-multiple-modal" class="modal-overlay" style="display: none;">
          <div class="modal-content small-modal">
             <span class="modal-close" id="close-eliminar-multiple-modal">&times;</span>
@@ -248,7 +239,9 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='menu.js') }}"></script>
-    <script src="{{ url_for('static', filename='reportes.js') }}"></script>
+    <!-- Scripts con la ubicación exacta -->
+    <script src="/static/menu.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/reportes.js"></script>
 </body>
 </html>

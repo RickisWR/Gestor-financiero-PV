@@ -27,7 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function cargarUsuarios() {
-        fetch('/api/usuarios')
+        // CORRECCIÓN: Uso de fetchAPI
+        fetchAPI('/api/usuarios')
         .then(res => res.json())
         .then(data => {
             if(data.error) { console.error(data.error); return; }
@@ -43,7 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 let jefeCol = '';
                 if (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) {
-                    jefeCol = `<td>${user.nombre_jefe || '<span style="color:#aaa">N/A</span>'}</td>`;
+                    // Mostrar si tiene jefe asignado
+                    jefeCol = `<td>${user.jefe_id ? 'Asignado' : '<span style="color:#aaa">N/A</span>'}</td>`;
                 }
 
                 tr.innerHTML = `
@@ -62,11 +64,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function cargarListaJefes() {
-        fetch('/api/jefes')
+        // CORRECCIÓN: Filtramos desde la ruta unificada de usuarios
+        fetchAPI('/api/usuarios')
         .then(res => res.json())
         .then(data => {
             let options = '<option value="">-- Selecciona un Jefe --</option>';
-            data.forEach(j => {
+            const jefes = data.filter(u => u.rol === 'admin' || u.rol === 'jefe');
+            jefes.forEach(j => {
                 options += `<option value="${j.id}">${j.nombre}</option>`;
             });
             if(selectJefeCrear) selectJefeCrear.innerHTML = options;
@@ -126,93 +130,103 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 4. CREAR USUARIO
-    formCrear.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const datos = {
-            nombre: document.getElementById('nuevo-nombre').value,
-            username: document.getElementById('nuevo-username').value,
-            password: document.getElementById('nuevo-password').value,
-            rol: document.getElementById('nuevo-rol').value
-        };
+    if (formCrear) {
+        formCrear.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const datos = {
+                nombre: document.getElementById('nuevo-nombre').value,
+                username: document.getElementById('nuevo-username').value,
+                password: document.getElementById('nuevo-password').value,
+                rol: document.getElementById('nuevo-rol').value
+            };
 
-        // Si es admin y eligió un rol operativo, mandar jefe_id
-        if (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) {
-            const jefeVal = selectJefeCrear.value;
-            if (divJefeCrear.style.display !== 'none' && jefeVal) {
-                datos.jefe_id = jefeVal;
+            // Si es admin y eligió un rol operativo, mandar jefe_id
+            if (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) {
+                const jefeVal = selectJefeCrear.value;
+                if (divJefeCrear.style.display !== 'none' && jefeVal) {
+                    datos.jefe_id = jefeVal;
+                }
             }
-        }
 
-        fetch('/api/usuarios', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(datos)
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.error) alert(data.error);
-            else {
-                alert("Usuario creado.");
-                formCrear.reset();
-                cargarUsuarios();
-                if(ES_ADMIN) toggleSelectJefe(selectRolCrear, divJefeCrear); // Reset UI
-            }
+            fetchAPI('/api/usuarios', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(datos)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) alert(data.error);
+                else {
+                    alert("Usuario creado.");
+                    formCrear.reset();
+                    cargarUsuarios();
+                    if(ES_ADMIN) toggleSelectJefe(selectRolCrear, divJefeCrear); // Reset UI
+                }
+            });
         });
-    });
+    }
 
     // 5. MODIFICAR USUARIO (PUT)
-    formModificar.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const id = document.getElementById('modificar-id').value;
-        const datos = {
-            nombre: document.getElementById('modificar-nombre').value,
-            username: document.getElementById('modificar-username').value,
-            rol: document.getElementById('modificar-rol').value,
-            password: document.getElementById('modificar-password').value
-        };
+    if (formModificar) {
+        formModificar.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('modificar-id').value;
+            const datos = {
+                nombre: document.getElementById('modificar-nombre').value,
+                username: document.getElementById('modificar-username').value,
+                rol: document.getElementById('modificar-rol').value,
+                password: document.getElementById('modificar-password').value
+            };
 
-        if (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) {
-            const jefeVal = selectJefeMod.value;
-            if (divJefeMod.style.display !== 'none') {
-                datos.jefe_id = jefeVal;
+            if (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) {
+                const jefeVal = selectJefeMod.value;
+                if (divJefeMod.style.display !== 'none') {
+                    datos.jefe_id = jefeVal;
+                }
             }
-        }
 
-        fetch(`/api/usuarios/${id}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(datos)
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.error) alert(data.error);
-            else {
-                alert("Usuario actualizado.");
-                modalModificar.style.display = 'none';
-                cargarUsuarios();
-            }
+            fetchAPI(`/api/usuarios/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(datos)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) alert(data.error);
+                else {
+                    alert("Usuario actualizado.");
+                    modalModificar.style.display = 'none';
+                    cargarUsuarios();
+                }
+            });
         });
-    });
+    }
 
     // 6. ELIMINAR USUARIO
-    document.getElementById('confirmar-eliminacion').addEventListener('click', function() {
-        if(!usuarioIdParaAccion) return;
-        fetch(`/api/usuarios/${usuarioIdParaAccion}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-            if(data.error) alert(data.error);
-            else {
-                alert("Eliminado.");
-                modalEliminar.style.display = 'none';
-                cargarUsuarios();
-            }
+    const btnConfirmarEli = document.getElementById('confirmar-eliminacion');
+    if (btnConfirmarEli) {
+        btnConfirmarEli.addEventListener('click', function() {
+            if(!usuarioIdParaAccion) return;
+            fetchAPI(`/api/usuarios/${usuarioIdParaAccion}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) alert(data.error);
+                else {
+                    alert("Eliminado.");
+                    modalEliminar.style.display = 'none';
+                    cargarUsuarios();
+                }
+            });
         });
-    });
+    }
 
     // Cerrar Modales
-    document.getElementById('close-modificar-modal').addEventListener('click', () => modalModificar.style.display = 'none');
-    document.getElementById('close-eliminar-modal').addEventListener('click', () => modalEliminar.style.display = 'none');
-    document.getElementById('cancelar-eliminacion').addEventListener('click', () => modalEliminar.style.display = 'none');
+    document.querySelectorAll('#close-modificar-modal, #close-eliminar-modal, #cancelar-eliminacion').forEach(btn => {
+        if(btn) btn.addEventListener('click', () => {
+            if (modalModificar) modalModificar.style.display = 'none';
+            if (modalEliminar) modalEliminar.style.display = 'none';
+        });
+    });
 
     init();
 });
