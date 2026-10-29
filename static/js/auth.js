@@ -114,9 +114,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. PROTECCIÓN DE RUTAS Y GESTIÓN DE ROLES (BUG 2)
     // ==========================================
     const currentPath = window.location.pathname.toLowerCase();
-    const isLogin = currentPath.includes('login.html');
+    
+    // CORRECCIÓN CLAVE: Buscamos solo 'login' para evitar el bucle de Cloudflare Pages
+    const isLogin = currentPath.includes('login'); 
 
-    if (!isLogin) {
+    if (isLogin) {
+        // Si el usuario ya inició sesión e intenta entrar a login, lo regresamos al inicio
+        if (localStorage.getItem('token') && localStorage.getItem('user')) {
+            window.location.href = '/templates/index.html';
+        }
+    } else {
         const token = localStorage.getItem('token');
         const userStr = localStorage.getItem('user');
 
@@ -139,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user.rol !== 'admin' && user.rol !== 'jefe') {
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
             // Bloqueo de URL por seguridad en frontend
-            if (currentPath.includes('usuarios.html')) {
+            if (currentPath.includes('usuarios.html') || currentPath.includes('usuarios')) {
                 window.location.href = '/templates/index.html';
             }
         }
@@ -150,17 +157,17 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.super-admin-only').forEach(el => el.style.display = 'none');
             
             // Ocultar menú de usuarios y bloquear ruta
-            document.querySelectorAll('a[href*="usuarios.html"]').forEach(el => {
+            document.querySelectorAll('a[href*="usuarios"]').forEach(el => {
                 if (el.parentElement) el.parentElement.style.display = 'none';
             });
-            if (currentPath.includes('usuarios.html')) {
+            if (currentPath.includes('usuarios.html') || currentPath.includes('usuarios')) {
                 window.location.href = '/templates/index.html';
             }
         }
 
         // REGLA C: Restricciones exclusivas para el ADMIN
         if (user.rol === 'admin') {
-            const rutasFinancieras = ['registro_movimientos.html', 'generacion_reportes.html', 'cuentas_por_pagar.html'];
+            const rutasFinancieras = ['registro_movimientos', 'generacion_reportes', 'cuentas_por_pagar'];
             
             // Ocultar los enlaces del menú lateral
             document.querySelectorAll('#main-menu a').forEach(link => {
